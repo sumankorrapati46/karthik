@@ -1,7 +1,8 @@
 package com.farmer.Form.Repository;
 
 
-import org.springframework.data.jpa.repository.JpaRepository;
 import com.farmer.Form.Entity.Farmer;
-
-public interface FarmerRepository extends JpaRepository<Farmer, Long> { }
+import org.springframework.data.jpa.repository.JpaRepository;
+ 
+public interface FarmerRepository extends JpaRepository<Farmer, Long> {
+}
