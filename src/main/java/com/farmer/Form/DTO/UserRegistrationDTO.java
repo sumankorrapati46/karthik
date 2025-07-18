@@ -30,9 +30,6 @@ public class UserRegistrationDTO {
     @Pattern(regexp = "^[1-9][0-9]{5}$", message = "Invalid Pin Code")
     private String pinCode;
  
-    @NotBlank(message = "Time zone is required")
-    private String timeZone;
- 
     @NotBlank(message = "Email is required")
     @Email(message = "Invalid email format")
     private String email;

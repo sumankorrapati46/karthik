@@ -1,30 +1,30 @@
 package com.farmer.Form.Service.Impl;
-
+ 
 import com.farmer.Form.Entity.Employee;
 import com.farmer.Form.Repository.EmployeeRepository;
 import com.farmer.Form.Service.EmployeeService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
-
+ 
 import java.util.List;
-
+ 
 @Service
 @RequiredArgsConstructor
 public class EmployeeServiceImpl implements EmployeeService {
-
+ 
     private final EmployeeRepository repository;
-
+ 
     @Override
     public Employee saveEmployee(Employee updated) {
         // If ID is null, treat as a new employee
         if (updated.getId() == null) {
             return repository.save(updated);
         }
-
+ 
         // Fetch existing employee for update
         Employee existing = repository.findById(updated.getId()).orElse(null);
         if (existing == null) return null;
-
+ 
         // ✅ Only update fields that are not null
         if (updated.getSalutation() != null) existing.setSalutation(updated.getSalutation());
         if (updated.getFirstName() != null) existing.setFirstName(updated.getFirstName());
@@ -59,22 +59,54 @@ public class EmployeeServiceImpl implements EmployeeService {
         if (updated.getDocumentFileName() != null) existing.setDocumentFileName(updated.getDocumentFileName());
         if (updated.getRole() != null) existing.setRole(updated.getRole());
         if (updated.getAccessStatus() != null) existing.setAccessStatus(updated.getAccessStatus());
-
+ 
         return repository.save(existing);
     }
-
+ 
     @Override
     public List<Employee> getAllEmployees() {
         return repository.findAll();
     }
-
+ 
     @Override
     public Employee getEmployeeById(Long id) {
         return repository.findById(id).orElse(null);
     }
-
+ 
     @Override
     public void deleteEmployee(Long id) {
         repository.deleteById(id);
     }
+
+    // --- SUPER ADMIN RAW CRUD ---
+    @Override
+    public List<Employee> getAllEmployeesRaw() {
+        return repository.findAll();
+    }
+
+    @Override
+    public Employee getEmployeeRawById(Long id) {
+        return repository.findById(id).orElseThrow(() -> new RuntimeException("Employee not found with ID: " + id));
+    }
+
+    @Override
+    public Employee createEmployeeBySuperAdmin(Employee employee) {
+        return repository.save(employee);
+    }
+
+    @Override
+    public Employee updateEmployeeBySuperAdmin(Long id, Employee updated) {
+        Employee employee = getEmployeeRawById(id);
+        // Update fields as needed
+        employee.setFirstName(updated.getFirstName());
+        employee.setLastName(updated.getLastName());
+        // ... update other fields as needed
+        return repository.save(employee);
+    }
+
+    @Override
+    public void deleteEmployeeBySuperAdmin(Long id) {
+        repository.deleteById(id);
+    }
 }
+ 

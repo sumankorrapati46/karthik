@@ -4,7 +4,6 @@ import com.farmer.Form.DTO.FarmerDto;
 import com.farmer.Form.DTO.PincodeApiResponse.PostOffice;
 import com.farmer.Form.Service.AddressService;
 import com.farmer.Form.Service.FarmerService;
-
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
@@ -12,21 +11,23 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
- 
+
 import java.util.List;
- 
+
 @RestController
 @RequestMapping("/api/farmers")
 public class FarmerController {
- 
+
     private final FarmerService service;
+    private final AddressService addressService;
     private final ObjectMapper objectMapper;
- 
-    public FarmerController(FarmerService service, ObjectMapper objectMapper) {
+
+    public FarmerController(FarmerService service, AddressService addressService, ObjectMapper objectMapper) {
         this.service = service;
+        this.addressService = addressService;
         this.objectMapper = objectMapper;
     }
- 
+
     // ✅ Create farmer with multipart/form-data
     @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<FarmerDto> createFarmer(
@@ -36,10 +37,9 @@ public class FarmerController {
             @RequestPart(value = "aadhaar", required = false) MultipartFile aadhaar,
             @RequestPart(value = "soilTestCertificate", required = false) MultipartFile soilTestCertificate
     ) throws JsonProcessingException {
- 
+
         FarmerDto farmerDTO = objectMapper.readValue(farmerDtoJson, FarmerDto.class);
- 
-        // ✅ Call the correct method
+
         FarmerDto createdFarmer = service.createFarmer(
                 farmerDTO,
                 photo,
@@ -47,23 +47,23 @@ public class FarmerController {
                 aadhaar,
                 soilTestCertificate
         );
- 
+
         return ResponseEntity.ok(createdFarmer);
     }
- 
+
     // ✅ Get farmer by ID
     @GetMapping("/{id}")
     public ResponseEntity<FarmerDto> getFarmerById(@PathVariable Long id) {
         return ResponseEntity.ok(service.getFarmerById(id));
     }
- 
+
     // ✅ Get all farmers
     @GetMapping
     public ResponseEntity<List<FarmerDto>> getAllFarmers() {
         return ResponseEntity.ok(service.getAllFarmers());
     }
- 
-    // ✅ Update farmer
+
+    // ✅ Update farmer with optional files
     @PutMapping(value = "/{id}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<FarmerDto> updateFarmer(
             @PathVariable Long id,
@@ -73,9 +73,9 @@ public class FarmerController {
             @RequestPart(value = "aadhaar", required = false) MultipartFile aadhaar,
             @RequestPart(value = "soilTestCertificate", required = false) MultipartFile soilTestCertificate
     ) throws JsonProcessingException {
- 
+
         FarmerDto farmerDTO = objectMapper.readValue(farmerDtoJson, FarmerDto.class);
- 
+
         FarmerDto updatedFarmer = service.updateFarmer(
                 id,
                 farmerDTO,
@@ -84,10 +84,14 @@ public class FarmerController {
                 aadhaar,
                 soilTestCertificate
         );
- 
+
         return ResponseEntity.ok(updatedFarmer);
     }
- 
- 
-    
+
+    // ✅ Get address info by pincode (optional utility)
+    @GetMapping("/address-by-pincode/{pincode}")
+    public ResponseEntity<PostOffice> getAddressByPincode(@PathVariable String pincode) {
+        PostOffice postOffice = addressService.fetchAddressByPincode(pincode);
+        return postOffice != null ? ResponseEntity.ok(postOffice) : ResponseEntity.notFound().build();
+    }
 }

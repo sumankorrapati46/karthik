@@ -48,12 +48,11 @@ public class User {
     @Column(nullable = false)
     private String pinCode;
 
-    @Column(nullable = false)
-    private String timeZone;
+    @Enumerated(EnumType.STRING)
+    private Role role;
 
-    @Column(nullable = false)
-    private String role; // e.g. Farmer, FPO, Employee
+    @Enumerated(EnumType.STRING)
+    private UserStatus status;
 
-    @Column(nullable = false)
-    private String status; // e.g. Active, Inactive, Pending
+    private boolean forcePasswordChange;
 }

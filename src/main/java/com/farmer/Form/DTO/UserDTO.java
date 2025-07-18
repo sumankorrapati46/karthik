@@ -42,9 +42,9 @@ public class UserDTO {
     @NotBlank(message = "PIN code is required.")
     @Pattern(regexp = "^[0-9]{6}$", message = "PIN code must be 6 digits.")
     private String pinCode;
- 
-    @NotBlank(message = "Time zone is required.")
-    private String timeZone;
+
+    @NotBlank(message = "Role is required.")
+    private String role;
  
    
 }

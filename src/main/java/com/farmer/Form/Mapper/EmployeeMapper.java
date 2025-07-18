@@ -1,8 +1,8 @@
 package com.farmer.Form.Mapper;
-
+ 
 import com.farmer.Form.DTO.EmployeeDTO;
 import com.farmer.Form.Entity.Employee;
-
+ 
 public class EmployeeMapper {
     public static Employee toEntity(EmployeeDTO dto, String photoFile, String passbookFile, String docFile) {
         return Employee.builder()
@@ -42,4 +42,5 @@ public class EmployeeMapper {
                 .build();
     }
 }
-
+ 
+ 

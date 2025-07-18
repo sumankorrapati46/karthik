@@ -1,247 +1,189 @@
 package com.farmer.Form.Service.Impl;
- 
 
+import com.farmer.Form.DTO.FarmerDto;
+import com.farmer.Form.Entity.Farmer;
+import com.farmer.Form.Mapper.FarmerMapper;
+import com.farmer.Form.Repository.FarmerRepository;
+import com.farmer.Form.Service.FarmerService;
+import com.farmer.Form.Service.FileStorageService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
-import com.farmer.Form.DTO.FarmerDto;
-import com.farmer.Form.Entity.Farmer;
-import com.farmer.Form.Repository.FarmerRepository;
-import com.farmer.Form.Service.FarmerService;
-
 import java.io.IOException;
-import java.util.Base64;
 import java.util.List;
 import java.util.stream.Collectors;
- 
+
 @Service
 public class FarmerServiceImpl implements FarmerService {
- 
+
     @Autowired
     private FarmerRepository farmerRepository;
- 
+
+    @Autowired
+    private FileStorageService fileStorageService;
+
+    @Autowired
+    private com.farmer.Form.Repository.EmployeeRepository employeeRepository;
+
     @Override
     public FarmerDto createFarmer(FarmerDto dto, MultipartFile photo, MultipartFile passbookPhoto,
                                   MultipartFile aadhaar, MultipartFile soilTestCertificate) {
- 
         try {
-            if (photo != null && !photo.isEmpty()) {
-                dto.setPhoto(Base64.getEncoder().encodeToString(photo.getBytes()));
-            }
- 
-            if (passbookPhoto != null && !passbookPhoto.isEmpty()) {
-                dto.setPassbook(Base64.getEncoder().encodeToString(passbookPhoto.getBytes()));
-            }
- 
-            if (aadhaar != null && !aadhaar.isEmpty()) {
-                dto.setDocumentFile(Base64.getEncoder().encodeToString(aadhaar.getBytes()));
-            }
- 
-            if (soilTestCertificate != null && !soilTestCertificate.isEmpty()) {
-                dto.setCurrentSoilTestCertificate(Base64.getEncoder().encodeToString(soilTestCertificate.getBytes()));
-            }
- 
-            Farmer farmer = convertToEntity(dto);
+            String photoFile = (photo != null && !photo.isEmpty())
+                    ? fileStorageService.storeFile(photo, "photos") : null;
+            String passbookFile = (passbookPhoto != null && !passbookPhoto.isEmpty())
+                    ? fileStorageService.storeFile(passbookPhoto, "passbooks") : null;
+            String aadhaarFile = (aadhaar != null && !aadhaar.isEmpty())
+                    ? fileStorageService.storeFile(aadhaar, "documents") : null;
+            String soilTestFile = (soilTestCertificate != null && !soilTestCertificate.isEmpty())
+                    ? fileStorageService.storeFile(soilTestCertificate, "soil-tests") : null;
+
+            Farmer farmer = FarmerMapper.toEntity(dto, photoFile, passbookFile, aadhaarFile, soilTestFile);
             Farmer saved = farmerRepository.save(farmer);
-            return convertToDTO(saved);
- 
+            return FarmerMapper.toDto(saved);
+
         } catch (IOException e) {
-            throw new RuntimeException("Failed to process uploaded files", e);
+            throw new RuntimeException("Failed to store uploaded files", e);
         }
     }
- 
+
     @Override
     public FarmerDto getFarmerById(Long id) {
         return farmerRepository.findById(id)
-                .map(this::convertToDTO)
+                .map(FarmerMapper::toDto)
                 .orElseThrow(() -> new RuntimeException("Farmer not found"));
     }
- 
+
     @Override
     public List<FarmerDto> getAllFarmers() {
         return farmerRepository.findAll().stream()
-                .map(this::convertToDTO)
+                .map(FarmerMapper::toDto)
                 .collect(Collectors.toList());
     }
- 
-    @Override
-    public FarmerDto updateFarmer(Long id, FarmerDto dto) {
-        Farmer existing = farmerRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Farmer not found"));
-        Farmer updated = convertToEntity(dto);
-        updated.setId(existing.getId());
-        return convertToDTO(farmerRepository.save(updated));
-    }
- 
+
     @Override
     public FarmerDto updateFarmer(Long id, FarmerDto dto,
                                   MultipartFile photo, MultipartFile passbookPhoto,
                                   MultipartFile aadhaar, MultipartFile soilTestCertificate) {
- 
+
         Farmer existing = farmerRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Farmer not found"));
- 
+
         try {
-            if (photo != null && !photo.isEmpty()) {
-                dto.setPhoto(Base64.getEncoder().encodeToString(photo.getBytes()));
-            } else {
-                dto.setPhoto(existing.getPhoto());
-            }
- 
-            if (passbookPhoto != null && !passbookPhoto.isEmpty()) {
-                dto.setPassbook(Base64.getEncoder().encodeToString(passbookPhoto.getBytes()));
-            } else {
-                dto.setPassbook(existing.getPassbook());
-            }
- 
-            if (aadhaar != null && !aadhaar.isEmpty()) {
-                dto.setDocumentFile(Base64.getEncoder().encodeToString(aadhaar.getBytes()));
-            } else {
-                dto.setDocumentFile(existing.getDocumentFile());
-            }
- 
-            if (soilTestCertificate != null && !soilTestCertificate.isEmpty()) {
-                dto.setCurrentSoilTestCertificate(Base64.getEncoder().encodeToString(soilTestCertificate.getBytes()));
-            } else {
-                dto.setCurrentSoilTestCertificate(existing.getCurrentSoilTestCertificate());
-            }
- 
-            Farmer updated = convertToEntity(dto);
-            updated.setId(id);
-            return convertToDTO(farmerRepository.save(updated));
- 
+            String photoFile = (photo != null && !photo.isEmpty())
+                    ? fileStorageService.storeFile(photo, "photos")
+                    : existing.getPhotoFileName();
+
+            String passbookFile = (passbookPhoto != null && !passbookPhoto.isEmpty())
+                    ? fileStorageService.storeFile(passbookPhoto, "passbooks")
+                    : existing.getPassbookFileName();
+
+            String aadhaarFile = (aadhaar != null && !aadhaar.isEmpty())
+                    ? fileStorageService.storeFile(aadhaar, "documents")
+                    : existing.getDocumentFileName();
+
+            String soilTestFile = (soilTestCertificate != null && !soilTestCertificate.isEmpty())
+                    ? fileStorageService.storeFile(soilTestCertificate, "soil-tests")
+                    : existing.getSoilTestCertificateFileName();
+
+            Farmer updated = FarmerMapper.toEntity(dto, photoFile, passbookFile, aadhaarFile, soilTestFile);
+            updated.setId(existing.getId());
+
+            Farmer saved = farmerRepository.save(updated);
+            return FarmerMapper.toDto(saved);
+
         } catch (IOException e) {
-            throw new RuntimeException("Failed to process uploaded files during update", e);
+            throw new RuntimeException("Failed to update files", e);
         }
     }
- 
+
+    @Override
+    public FarmerDto updateFarmer(Long id, FarmerDto dto) {
+        Farmer existing = farmerRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Farmer not found"));
+
+        Farmer updated = FarmerMapper.toEntity(dto,
+                existing.getPhotoFileName(),
+                existing.getPassbookFileName(),
+                existing.getDocumentFileName(),
+                existing.getSoilTestCertificateFileName());
+
+        updated.setId(existing.getId());
+        return FarmerMapper.toDto(farmerRepository.save(updated));
+    }
+
     @Override
     public void deleteFarmer(Long id) {
         farmerRepository.deleteById(id);
     }
- 
+
     @Override
     public long getFarmerCount() {
         return farmerRepository.count();
     }
- 
-    private Farmer convertToEntity(FarmerDto dto) {
-        return Farmer.builder()
-                .id(dto.getId())
-                .photo(dto.getPhoto())
-                .salutation(dto.getSalutation())
-                .firstName(dto.getFirstName())
-                .middleName(dto.getMiddleName())
-                .lastName(dto.getLastName())
-                .dateOfBirth(dto.getDateOfBirth())
-                .gender(dto.getGender())
-                .fatherName(dto.getFatherName())
-                .contactNumber(dto.getContactNumber())
-                .alternativeRelationType(dto.getAlternativeRelationType())
-                .alternativeContactNumber(dto.getAlternativeContactNumber())
-                .nationality(dto.getNationality())
-                .country(dto.getCountry())
-                .state(dto.getState())
-                .district(dto.getDistrict())
-                .block(dto.getBlock())
-                .village(dto.getVillage())
-                .pincode(dto.getPincode())
-                .education(dto.getEducation())
-                .experience(dto.getExperience())
-                .cropPhoto(dto.getCropPhoto())
-                .currentSurveyNumber(dto.getCurrentSurveyNumber())
-                .currentLandHolding(dto.getCurrentLandHolding())
-                .currentGeoTag(dto.getCurrentGeoTag())
-                .currentCrop(dto.getCurrentCrop())
-                .currentNetIncome(dto.getCurrentNetIncome())
-                .currentSoilTest(dto.getCurrentSoilTest())
-                .currentSoilTestCertificate(dto.getCurrentSoilTestCertificate())
-                .proposedSurveyNumber(dto.getProposedSurveyNumber())
-                .proposedLandHolding(dto.getProposedLandHolding())
-                .proposedGeoTag(dto.getProposedGeoTag())
-                .proposedCrop(dto.getProposedCrop())
-                .proposedNetIncome(dto.getProposedNetIncome())
-                .proposedSoilTest(dto.getProposedSoilTest())
-                .proposedSoilTestCertificate(dto.getProposedSoilTestCertificate())
-                .currentWaterSource(dto.getCurrentWaterSource())
-                .currentDischargeLPH(dto.getCurrentDischargeLPH())
-                .currentSummerDischarge(dto.getCurrentSummerDischarge())
-                .currentBorewellLocation(dto.getCurrentBorewellLocation())
-                .proposedWaterSource(dto.getProposedWaterSource())
-                .proposedDischargeLPH(dto.getProposedDischargeLPH())
-                .proposedSummerDischarge(dto.getProposedSummerDischarge())
-                .proposedBorewellLocation(dto.getProposedBorewellLocation())
-                .bankName(dto.getBankName())
-                .accountNumber(dto.getAccountNumber())
-                .branchName(dto.getBranchName())
-                .ifscCode(dto.getIfscCode())
-                .passbook(dto.getPassbook())
-                .documentType(dto.getDocumentType())
-                .documentNumber(dto.getDocumentNumber())
-                .documentFile(dto.getDocumentFile())
-                .portalRole(dto.getPortalRole())
-                .portalAccess(dto.getPortalAccess())
-                .build();
+
+    // --- SUPER ADMIN RAW CRUD ---
+    @Override
+    public List<Farmer> getAllFarmersRaw() {
+        return farmerRepository.findAll();
     }
- 
-    private FarmerDto convertToDTO(Farmer farmer) {
-        FarmerDto dto = new FarmerDto();
-        dto.setId(farmer.getId());
-        dto.setPhoto(farmer.getPhoto());
-        dto.setSalutation(farmer.getSalutation());
-        dto.setFirstName(farmer.getFirstName());
-        dto.setMiddleName(farmer.getMiddleName());
-        dto.setLastName(farmer.getLastName());
-        dto.setDateOfBirth(farmer.getDateOfBirth());
-        dto.setGender(farmer.getGender());
-        dto.setFatherName(farmer.getFatherName());
-        dto.setContactNumber(farmer.getContactNumber());
-        dto.setAlternativeRelationType(farmer.getAlternativeRelationType());
-        dto.setAlternativeContactNumber(farmer.getAlternativeContactNumber());
-        dto.setNationality(farmer.getNationality());
-        dto.setCountry(farmer.getCountry());
-        dto.setState(farmer.getState());
-        dto.setDistrict(farmer.getDistrict());
-        dto.setBlock(farmer.getBlock());
-        dto.setVillage(farmer.getVillage());
-        dto.setPincode(farmer.getPincode());
-        dto.setEducation(farmer.getEducation());
-        dto.setExperience(farmer.getExperience());
-        dto.setCropPhoto(farmer.getCropPhoto());
-        dto.setCurrentSurveyNumber(farmer.getCurrentSurveyNumber());
-        dto.setCurrentLandHolding(farmer.getCurrentLandHolding());
-        dto.setCurrentGeoTag(farmer.getCurrentGeoTag());
-        dto.setCurrentCrop(farmer.getCurrentCrop());
-        dto.setCurrentNetIncome(farmer.getCurrentNetIncome());
-        dto.setCurrentSoilTest(farmer.getCurrentSoilTest());
-        dto.setCurrentSoilTestCertificate(farmer.getCurrentSoilTestCertificate());
-        dto.setProposedSurveyNumber(farmer.getProposedSurveyNumber());
-        dto.setProposedLandHolding(farmer.getProposedLandHolding());
-        dto.setProposedGeoTag(farmer.getProposedGeoTag());
-        dto.setProposedCrop(farmer.getProposedCrop());
-        dto.setProposedNetIncome(farmer.getProposedNetIncome());
-        dto.setProposedSoilTest(farmer.getProposedSoilTest());
-        dto.setProposedSoilTestCertificate(farmer.getProposedSoilTestCertificate());
-        dto.setCurrentWaterSource(farmer.getCurrentWaterSource());
-        dto.setCurrentDischargeLPH(farmer.getCurrentDischargeLPH());
-        dto.setCurrentSummerDischarge(farmer.getCurrentSummerDischarge());
-        dto.setCurrentBorewellLocation(farmer.getCurrentBorewellLocation());
-        dto.setProposedWaterSource(farmer.getProposedWaterSource());
-        dto.setProposedDischargeLPH(farmer.getProposedDischargeLPH());
-        dto.setProposedSummerDischarge(farmer.getProposedSummerDischarge());
-        dto.setProposedBorewellLocation(farmer.getProposedBorewellLocation());
-        dto.setBankName(farmer.getBankName());
-        dto.setAccountNumber(farmer.getAccountNumber());
-        dto.setBranchName(farmer.getBranchName());
-        dto.setIfscCode(farmer.getIfscCode());
-        dto.setPassbook(farmer.getPassbook());
-        dto.setDocumentType(farmer.getDocumentType());
-        dto.setDocumentNumber(farmer.getDocumentNumber());
-        dto.setDocumentFile(farmer.getDocumentFile());
-        dto.setPortalRole(farmer.getPortalRole());
-        dto.setPortalAccess(farmer.getPortalAccess());
-        return dto;
+
+    @Override
+    public Farmer getFarmerRawById(Long id) {
+        return farmerRepository.findById(id)
+            .orElseThrow(() -> new RuntimeException("Farmer not found with ID: " + id));
+    }
+
+    @Override
+    public Farmer createFarmerBySuperAdmin(Farmer farmer) {
+        return farmerRepository.save(farmer);
+    }
+
+    @Override
+    public Farmer updateFarmerBySuperAdmin(Long id, Farmer updatedFarmer) {
+        Farmer farmer = getFarmerRawById(id);
+        // Update fields as needed
+        farmer.setFirstName(updatedFarmer.getFirstName());
+        farmer.setLastName(updatedFarmer.getLastName());
+        farmer.setDateOfBirth(updatedFarmer.getDateOfBirth());
+        farmer.setGender(updatedFarmer.getGender());
+        farmer.setContactNumber(updatedFarmer.getContactNumber());
+        farmer.setCountry(updatedFarmer.getCountry());
+        farmer.setState(updatedFarmer.getState());
+        farmer.setDistrict(updatedFarmer.getDistrict());
+        farmer.setBlock(updatedFarmer.getBlock());
+        farmer.setVillage(updatedFarmer.getVillage());
+        farmer.setPincode(updatedFarmer.getPincode());
+        // ... update other fields as needed
+        return farmerRepository.save(farmer);
+    }
+
+    @Override
+    public void deleteFarmerBySuperAdmin(Long id) {
+        farmerRepository.deleteById(id);
+    }
+
+    @Override
+    public void assignFarmerToEmployee(Long farmerId, Long employeeId) {
+        Farmer farmer = farmerRepository.findById(farmerId)
+            .orElseThrow(() -> new RuntimeException("Farmer not found"));
+        com.farmer.Form.Entity.Employee employee = employeeRepository.findById(employeeId)
+            .orElseThrow(() -> new RuntimeException("Employee not found"));
+        farmer.setAssignedEmployee(employee);
+        farmerRepository.save(farmer);
+    }
+
+    @Override
+    public List<Farmer> getFarmersByEmployeeEmail(String email) {
+        return farmerRepository.findByAssignedEmployee_Email(email);
+    }
+
+    @Override
+    public void approveKyc(Long farmerId) {
+        Farmer farmer = farmerRepository.findById(farmerId)
+            .orElseThrow(() -> new RuntimeException("Farmer not found"));
+        farmer.setKycApproved(true);
+        farmerRepository.save(farmer);
     }
 }
- 

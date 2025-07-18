@@ -1,115 +1,124 @@
 package com.farmer.Form.Service;
-
-import com.google.firebase.auth.FirebaseAuth;
-import com.google.firebase.auth.FirebaseAuthException;
-import com.google.firebase.auth.FirebaseToken;
-import lombok.RequiredArgsConstructor;
+ 
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
  
+import java.time.Instant;
 import java.util.Map;
 import java.util.Set;
-import java.util.Random;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ThreadLocalRandom;
  
+/**
+ * ✅ OTP Service for email verification.
+ * Features:
+ * - OTP: 6-digit numeric code
+ * - Expiry: 10 minutes
+ * - Cooldown: 30 seconds between requests
+ * - Auto-cleanup after verification
+ */
 @Service
-@RequiredArgsConstructor
 @Slf4j
 public class OtpService {
  
-    private final FirebaseAuth firebaseAuth;
+    // ───── Configuration ─────
+    private static final long OTP_EXPIRY_MS      = 10 * 60 * 1_000; // 10 minutes
+    private static final long RESEND_COOLDOWN_MS = 30 * 1_000;      // 30 seconds
  
-    // OTP store: emailOrPhone -> otp
-    private final Map<String, String> otpStore = new ConcurrentHashMap<>();
+    // ───── Internal Store ─────
+    private record OtpEntry(String otp, long issuedAt) {}
  
-    // Verified email/phones
-    private final Set<String> verifiedUsers = ConcurrentHashMap.newKeySet();
+    private final Map<String, OtpEntry> otpStore = new ConcurrentHashMap<>();
+    private final Set<String> verifiedEmails = ConcurrentHashMap.newKeySet();
  
-    // ✅ Firebase token verification
-    public boolean verifyOtp(String idToken) {
-        try {
-            FirebaseToken decodedToken = firebaseAuth.verifyIdToken(idToken);
-            log.info("Firebase token verified for user: {}", decodedToken.getEmail());
-            return decodedToken != null;
-        } catch (FirebaseAuthException e) {
-            log.warn("Firebase token verification failed: {}", e.getMessage());
-            return false;
-        }
+    // ───── Public API ─────
+ 
+    /**
+     * ✅ Alias method to maintain backward compatibility
+     */
+    public String generateOtp(String rawEmail) {
+        return generateAndSendOtp(rawEmail);
     }
  
-    // ✅ Manual OTP verification
-    public boolean verifyOtp(String emailOrPhone, String otp) {
-        String storedOtp = otpStore.get(emailOrPhone);
-        boolean isValid = storedOtp != null && storedOtp.equals(otp);
+    /**
+     * Generates or re-sends OTP for the given email.
+     * Throws error if cooldown hasn't passed.
+     */
+    public String generateAndSendOtp(String rawEmail) {
+        if (rawEmail == null || rawEmail.trim().isEmpty())
+            throw new IllegalArgumentException("Email cannot be empty.");
  
-        log.info("Verifying OTP for {}: provided={}, expected={}, result={}",
-                emailOrPhone, otp, storedOtp, isValid);
+        String email = normalize(rawEmail);
+        long now = Instant.now().toEpochMilli();
  
-        if (isValid) {
-            otpStore.remove(emailOrPhone); // OTP is single-use
-            verifiedUsers.add(emailOrPhone); // ✅ Mark as verified
-            log.info("OTP verified and added to verified set for {}", emailOrPhone);
-        }
- 
-        return isValid;
-    }
- 
-    // ✅ Check if email/phone is verified
-    public boolean isVerified(String emailOrPhone) {
-        return verifiedUsers.contains(emailOrPhone);
-    }
- 
-    // ✅ Clear verification (after registration)
-    public void clearVerification(String emailOrPhone) {
-        verifiedUsers.remove(emailOrPhone);
-        log.info("Cleared verification state for {}", emailOrPhone);
-    }
- 
-    // ✅ Extract email from Firebase token
-    public String getUserEmailOrPhoneFromToken(String idToken) {
-        try {
-            FirebaseToken decodedToken = firebaseAuth.verifyIdToken(idToken);
-            String emailOrPhone = decodedToken != null ? decodedToken.getEmail() : null;
-            log.info("Extracted user identifier from token: {}", emailOrPhone);
-            return emailOrPhone;
-        } catch (FirebaseAuthException e) {
-            log.error("Failed to extract user identifier from token: {}", e.getMessage());
-            return null;
-        }
-    }
- 
-    // ✅ Generate + send OTP (email/SMS)
-    public String generateAndSendOtp(String emailOrPhone) {
-        String otp = String.format("%06d", new Random().nextInt(999999));
-        otpStore.put(emailOrPhone, otp);
- 
-        boolean isEmail = emailOrPhone.contains("@");
-        log.info("Generated OTP for {}: {}", isEmail ? "email" : "phone", otp);
- 
-        if (isEmail) {
-            sendOtpEmail(emailOrPhone, otp);
-        } else {
-            sendOtpSms(emailOrPhone, otp);
+        // Enforce resend cooldown
+        OtpEntry existing = otpStore.get(email);
+        if (existing != null && (now - existing.issuedAt) < RESEND_COOLDOWN_MS) {
+            long wait = (RESEND_COOLDOWN_MS - (now - existing.issuedAt)) / 1_000;
+            throw new IllegalStateException("⏳ Please wait " + wait + "s before requesting a new OTP.");
         }
  
+        // Generate fresh OTP
+        String otp = String.format("%06d", ThreadLocalRandom.current().nextInt(0, 1_000_000));
+        otpStore.put(email, new OtpEntry(otp, now));
+        sendOtpEmail(email, otp);
+ 
+        log.info("🔐 OTP [{}] issued for {}", otp, email);
         return otp;
     }
  
-    // ✅ Simulate email OTP sending
-    private void sendOtpEmail(String email, String otp) {
-        log.info("OTP email sent to {}: {}", email, otp);
-        // Integrate JavaMailSender here
+    /**
+     * Verifies OTP and marks email as verified.
+     */
+    public boolean verifyOtp(String rawEmail, String otp) {
+        if (rawEmail == null || otp == null)
+            return false;
+ 
+        String email = normalize(rawEmail);
+        OtpEntry entry = otpStore.get(email);
+        long now = Instant.now().toEpochMilli();
+ 
+        boolean valid = entry != null
+                     && entry.otp().equals(otp)
+                     && (now - entry.issuedAt) < OTP_EXPIRY_MS;
+ 
+        if (valid) {
+            otpStore.remove(email);            // One-time use
+            verifiedEmails.add(email);         // Mark as verified
+            log.info("✅ OTP verified for {}", email);
+        } else {
+            log.warn("❌ OTP verification failed for {}", email);
+        }
+ 
+        return valid;
     }
  
-    // ✅ Simulate SMS OTP sending
-    private void sendOtpSms(String phoneNumber, String otp) {
-        log.info("OTP SMS sent to {}: {}", phoneNumber, otp);
-        // Integrate Twilio or Firebase SMS here
+    /**
+     * Checks if email has already been OTP-verified.
+     */
+    public boolean isEmailOtpVerified(String rawEmail) {
+        return verifiedEmails.contains(normalize(rawEmail));
     }
  
-    // ✅ Optional alias
-    public boolean verifyOtpCode(String phoneNumber, String otp) {
-        return verifyOtp(phoneNumber, otp);
+    /**
+     * Clear verification once user is registered.
+     */
+    public void clearEmailVerification(String rawEmail) {
+        verifiedEmails.remove(normalize(rawEmail));
+        otpStore.remove(normalize(rawEmail));
+    }
+ 
+    // ───── Helpers ─────
+ 
+    private String normalize(String email) {
+        return email == null ? null : email.trim().toLowerCase();
+    }
+ 
+    /**
+     * Stub: Replace this with actual email service (e.g., SendGrid, SMTP).
+     */
+    private void sendOtpEmail(String to, String otp) {
+        log.info("📧 (stub) Sending OTP email to '{}': {}", to, otp);
     }
 }
  
