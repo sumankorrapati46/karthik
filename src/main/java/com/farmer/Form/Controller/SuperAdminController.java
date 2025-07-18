@@ -9,6 +9,7 @@ import com.farmer.Form.Service.EmployeeService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.security.access.prepost.PreAuthorize;
 
 import java.util.List;
 import java.util.Map;
@@ -44,6 +45,7 @@ public class SuperAdminController {
         return ResponseEntity.ok(userService.updateUserBySuperAdmin(id, user));
     }
 
+    @PreAuthorize("hasRole('SUPER_ADMIN')")
     @DeleteMapping("/users/{id}")
     public ResponseEntity<String> deleteUser(@PathVariable Long id) {
         userService.deleteUserBySuperAdmin(id);
