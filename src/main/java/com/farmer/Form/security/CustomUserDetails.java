@@ -12,11 +12,7 @@ import com.farmer.Form.Entity.User;
 import lombok.AllArgsConstructor;
  
 @AllArgsConstructor
- 
 public class CustomUserDetails implements UserDetails {
-    /**
-     *
-     */
  
     private static final long serialVersionUID = 1L;
  
@@ -24,7 +20,7 @@ public class CustomUserDetails implements UserDetails {
  
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
-        return Collections.singletonList(new SimpleGrantedAuthority("ROLE_USER"));
+        return Collections.singletonList(new SimpleGrantedAuthority("ROLE_" + user.getRole().name()));
     }
  
     @Override

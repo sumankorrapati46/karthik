@@ -76,12 +76,13 @@ public interface UserMapper {
         @Mapping(target = "firstName", source = "firstName"),
         @Mapping(target = "lastName", source = "lastName"),
         @Mapping(target = "email", source = "email"),
-        @Mapping(target = "mobileNumber", source = "phoneNumber"),
+        @Mapping(target = "mobileNumber", source = "phoneNumber"), // This is correct - mapping phoneNumber to mobileNumber
         @Mapping(target = "dateOfBirth", source = "dateOfBirth", qualifiedByName = "localDateToString"),
         @Mapping(target = "gender", source = "gender"),
         @Mapping(target = "country", source = "country"),
         @Mapping(target = "state", source = "state"),
         @Mapping(target = "pinCode", source = "pinCode"),
+        @Mapping(target = "city", ignore = true), // City is not in User entity, so ignore it
         @Mapping(target = "role", source = "role", qualifiedByName = "roleToString"),
         @Mapping(target = "status", source = "status", qualifiedByName = "statusToString")
     })

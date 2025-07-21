@@ -22,6 +22,7 @@ import com.farmer.Form.Service.EmailService;
 import com.farmer.Form.Service.OtpService;
 import com.farmer.Form.Service.UserService;
 import com.farmer.Form.security.JwtUtil;
+import com.farmer.Form.exception.UserAlreadyExistsException;
 
 import java.util.HashMap;
 import java.util.List;
@@ -63,10 +64,24 @@ public class AuthController {
     // ✅ REGISTER
     @PostMapping("/register")
     public ResponseEntity<Map<String, String>> registerUser(@Valid @RequestBody UserDTO userDTO) {
-        userService.registerUser(userDTO);
-        Map<String, String> response = new HashMap<>();
-        response.put("message", "Registration successful - waiting for approval");
-        return ResponseEntity.ok(response);
+        try {
+            userService.registerUser(userDTO);
+            Map<String, String> response = new HashMap<>();
+            response.put("message", "Registration successful - waiting for approval");
+            return ResponseEntity.ok(response);
+        } catch (UserAlreadyExistsException e) {
+            Map<String, String> error = new HashMap<>();
+            error.put("message", e.getMessage());
+            return ResponseEntity.badRequest().body(error);
+        } catch (IllegalArgumentException e) {
+            Map<String, String> error = new HashMap<>();
+            error.put("message", "Invalid data: " + e.getMessage());
+            return ResponseEntity.badRequest().body(error);
+        } catch (Exception e) {
+            Map<String, String> error = new HashMap<>();
+            error.put("message", "Registration failed: " + e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(error);
+        }
     }
 
     // ✅ SEND OTP

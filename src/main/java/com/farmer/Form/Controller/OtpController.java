@@ -1,10 +1,10 @@
 package com.farmer.Form.Controller;
-
-
+ 
+ 
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-
+ 
 import com.farmer.Form.Service.OtpService;
  
 @RestController
@@ -25,7 +25,7 @@ public class OtpController {
     @PostMapping("/verify")
     public ResponseEntity<String> verifyOtp(@RequestParam String phoneNumber,
                                             @RequestParam String otp) {
-        boolean isValid = otpService.verifyOtpCode(phoneNumber, otp);
+        boolean isValid = otpService.verifyOtp(phoneNumber, otp);
         if (isValid) {
             return ResponseEntity.ok("OTP verified successfully");
         } else {
@@ -33,3 +33,4 @@ public class OtpController {
         }
     }
 }
+ 

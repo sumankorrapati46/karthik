@@ -7,11 +7,12 @@ import java.time.LocalDate;
 
 @Entity
 @Table(name = "users")
-@Getter
-@Setter
+@Data
+@Builder
 @NoArgsConstructor
 @AllArgsConstructor
-@Builder
+@ToString
+@EqualsAndHashCode
 public class User {
 
     @Id
