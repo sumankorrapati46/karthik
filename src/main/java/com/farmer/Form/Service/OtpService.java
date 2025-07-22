@@ -2,6 +2,7 @@ package com.farmer.Form.Service;
  
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import org.springframework.beans.factory.annotation.Autowired;
  
 import java.time.Instant;
 import java.util.Map;
@@ -30,6 +31,9 @@ public class OtpService {
  
     private final Map<String, OtpEntry> otpStore = new ConcurrentHashMap<>();
     private final Set<String> verifiedEmails = ConcurrentHashMap.newKeySet();
+ 
+    @Autowired
+    private EmailService emailService;
  
     // ───── Public API ─────
  
@@ -118,7 +122,7 @@ public class OtpService {
      * Stub: Replace this with actual email service (e.g., SendGrid, SMTP).
      */
     private void sendOtpEmail(String to, String otp) {
-        log.info("📧 (stub) Sending OTP email to '{}': {}", to, otp);
+        emailService.sendOtpEmail(to, otp);
     }
 }
  

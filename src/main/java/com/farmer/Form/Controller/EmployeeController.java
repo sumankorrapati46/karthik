@@ -297,30 +297,33 @@ public class EmployeeController {
     
     // Helper method to format photo URLs
     private void formatPhotoUrls(Employee employee) {
-        // Handle photo URL - set multiple formats for frontend compatibility
-        if (employee.getPhotoFileName() != null && !employee.getPhotoFileName().startsWith("http")) {
-            String photoUrl = "/uploads/photos/" + employee.getPhotoFileName();
-            employee.setPhotoFileName(photoUrl);
-            employee.setPhotoUrl(photoUrl);
-            // Also set other possible field names the frontend might expect
-            try {
-                // Use reflection to set additional photo fields if they exist
-                employee.getClass().getMethod("setPhoto", String.class).invoke(employee, photoUrl);
-            } catch (Exception e) {
-                // Field doesn't exist, ignore
+        // Only set photoFileName to the file name (not a path or URL)
+        if (employee.getPhotoFileName() != null) {
+            String fileName = employee.getPhotoFileName();
+            // Remove any leading slashes or paths
+            if (fileName.contains("/")) {
+                fileName = fileName.substring(fileName.lastIndexOf("/") + 1);
             }
-        } else if (employee.getPhotoFileName() != null) {
-            employee.setPhotoUrl(employee.getPhotoFileName());
+            employee.setPhotoFileName(fileName);
+            employee.setPhotoUrl("/uploads/photos/" + fileName);
+        } else {
+            employee.setPhotoUrl(null);
         }
-        
-        // Handle passbook URL
-        if (employee.getPassbookFileName() != null && !employee.getPassbookFileName().startsWith("http")) {
-            employee.setPassbookFileName("/uploads/passbooks/" + employee.getPassbookFileName());
+        // Passbook
+        if (employee.getPassbookFileName() != null) {
+            String fileName = employee.getPassbookFileName();
+            if (fileName.contains("/")) {
+                fileName = fileName.substring(fileName.lastIndexOf("/") + 1);
+            }
+            employee.setPassbookFileName(fileName);
         }
-        
-        // Handle document URL
-        if (employee.getDocumentFileName() != null && !employee.getDocumentFileName().startsWith("http")) {
-            employee.setDocumentFileName("/uploads/documents/" + employee.getDocumentFileName());
+        // Document
+        if (employee.getDocumentFileName() != null) {
+            String fileName = employee.getDocumentFileName();
+            if (fileName.contains("/")) {
+                fileName = fileName.substring(fileName.lastIndexOf("/") + 1);
+            }
+            employee.setDocumentFileName(fileName);
         }
     }
 }

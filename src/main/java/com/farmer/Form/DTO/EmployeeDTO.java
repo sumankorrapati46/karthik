@@ -96,7 +96,7 @@ public class EmployeeDTO {
     @NotBlank(message = "Access status is required")
     private String accessStatus;
  
-    // File Uploads (Validate in service or controller)
+    // File Uploads (for @ModelAttribute)
     private MultipartFile photo;
     private MultipartFile passbook;
     private MultipartFile documentFile;

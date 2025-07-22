@@ -3,6 +3,7 @@ package com.farmer.Form.DTO;
 import lombok.*;
 
 import java.time.LocalDate;
+import org.springframework.web.multipart.MultipartFile;
 
 @Data
 @Builder
@@ -83,4 +84,13 @@ public class FarmerDTO {
     private String voterFileName;
     private String voterIdFileName;
     private String ppbFileName;
+
+    // File uploads (for @ModelAttribute)
+    private MultipartFile photo;
+    private MultipartFile passbookFile;
+    private MultipartFile soilTestCertificate;
+    private MultipartFile aadhaarFile;
+    private MultipartFile panFile;
+    private MultipartFile voterFile;
+    private MultipartFile ppbFile;
 }
